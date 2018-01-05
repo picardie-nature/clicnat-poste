@@ -1,0 +1,26 @@
+body {
+	width:100%;
+}
+
+.pn_top, .pn_menu, .pn_menu_top, .pn_main, .pn_foot {
+	margin-right: 0px;
+	margin-left: 0px;
+}
+
+input[type="submit"], input[type="button"] {
+	border: 1px solid #aeaeae;
+	background-color: #efefef;
+	border-radius: 3px;
+}
+
+input[type="text"], input[type="password"], textarea, select, input[type="checkbox"] {
+	border: 1px solid #aeaeae;
+	background-color: #ffffff;
+	border-radius: 3px;
+}
+
+input[type=submit]:hover, input[type="button"]:hover {
+	background-color: #fafafa;
+}
+
+

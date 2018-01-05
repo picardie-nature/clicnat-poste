@@ -1,0 +1,27 @@
+{
+   "name": "picnat/clicnatqg",
+   "description": "clicnat admin",
+   "type": "",
+   "autoload": {
+   },
+   "require": {
+      "picnat/clicnatcore": "dev-master",
+      "morrisjs/morris.js": "^0.5.1",
+      "sheillendra/raphael": "^2.1",
+      "components/jquery": "^2.2",
+      "components/jqueryui": "^1.12"
+   },
+   "repositories": [{
+      "type": "vcs",
+      "url": "https://github.com/les-amienois/clicnat-core.git"
+   },
+   {
+      "type": "vcs",
+      "url": "https://github.com/picardie-nature/morris.js.git"
+   },
+   {
+      "type": "vcs",
+      "url": "https://github.com/picardie-nature/raphael.git"
+   }
+ ]
+}

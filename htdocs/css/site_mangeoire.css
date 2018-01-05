@@ -1,0 +1,7 @@
+div#banniere {
+	background-image: url('../image/mangeoire_banniere_3.jpg');
+}
+
+.pas_visible {
+	display:none;
+}

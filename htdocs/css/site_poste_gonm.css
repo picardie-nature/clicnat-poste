@@ -1,0 +1,17 @@
+#banniere {
+	background-image: url('../image/gonm/banniere.jpg') !important;
+}
+
+#banniere2 {
+	background-image: none !important;
+	background: transparent !important;
+}
+
+.logo_partenaire_gonm > img {
+	height: 96px;
+	max-height: 96px;
+}
+
+.logo_partenaire_gonm {
+	display: inline;
+}
