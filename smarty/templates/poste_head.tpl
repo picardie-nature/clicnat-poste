@@ -23,11 +23,11 @@
 <!-- <script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=true&v=3.5&key={$google_key}"></script>-->
 <script src="https://maps.google.com/maps/api/js?v=3.5&amp;sensor=false"></script>
 <script src="https://ssl.picardie-nature.org/statique/OpenLayers-2.master/OpenLayers.js"></script>
-<script src="http://deco.picardie-nature.org/proj4js/lib/proj4js-compressed.js" language="javascript"></script>
+<script src="js/proj4.js" language="javascript"></script>
 <script src="js/carte.js?a=b" language="javascript"></script>
 {/if}
 <script src="js/utils.js" language="javascript"></script>
-<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script> 
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
 <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/jquery-ui.min.js"></script>
 <script src="http://deco.picardie-nature.org/jquery/js/jquery.ui.datepicker-fr.js" language="javascript"></script>
 {if $usejqplot}
@@ -130,7 +130,7 @@ log('firebug ok');
 <div id="globcont" style="min-width: 1000px;">
 	<div class="bloc-haut" style="min-width: 1000px;">
 		<div id="banniere">
-			<div id="banniere2" class="banniere2">	
+			<div id="banniere2" class="banniere2">
 				<ul>
 				{if $u}
 				<li class="nbanniere_li">
@@ -258,4 +258,3 @@ log('firebug ok');
 	{foreach from=$bobs_msgs item=bobs_m}
 		<div style="background-color:white; padding:3px; border-bottom:2px;"><i>Info</i> {$bobs_m}</div>
 	{/foreach}
-

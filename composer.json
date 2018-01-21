@@ -13,7 +13,7 @@
    },
    "repositories": [{
       "type": "vcs",
-      "url": "https://github.com/les-amienois/clicnat-core.git"
+      "url": "https://github.com/picardie-nature/clicnat-core.git"
    },
    {
       "type": "vcs",

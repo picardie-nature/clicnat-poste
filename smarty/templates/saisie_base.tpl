@@ -1,10 +1,5 @@
 {include file="poste_head.tpl" titre_page="Saisie"}
 {include file="partiels/recherche_tag.tpl"}
-<!--
-<script src="http://deco.picardie-nature.org/prototype/prototype.js" language="javascript"></script>
-<script src="http://deco.picardie-nature.org/scriptaculous/effects.js" language="javascript"></script>
-<script src="http://deco.picardie-nature.org/scriptaculous/controls.js" language="javascript"></script>
--->
 <style>
 	{literal}
 		.informal {
@@ -31,7 +26,7 @@
 <div>
 	<h1 style="display:inline;">Observation</h1>
 	<span>#{$observation->id_observation}</span>
-	<div style="float:right;">	    
+	<div style="float:right;">
 	    <a style="float:right;" id="valobs">Envoyer l'observation</a>
 	    <a style="float:right;" id="supprobs">Supprimer</a>
 	    <a style="float:right;" id="duplobs">Cloner</a>
@@ -103,7 +98,7 @@
 	</div>
 	<div id="bobs-sb-dialog-so" title="Supprimer l'observation">
 		<p>
-			Vous allez supprimer l'observation et ses citations 
+			Vous allez supprimer l'observation et ses citations
 			associées.
 		</p>
 	</div>
@@ -160,7 +155,7 @@
 		<h3>Images en attente</h3>
 		{foreach from=$u->inbox_docs() item=d}
 			{assign var=doc value=$d.doc}
-			{if $doc->get_type() eq "image"} 
+			{if $doc->get_type() eq "image"}
 			<form method="post" action="?t=citation_attache_doc_inbox">
 				<img src="?t=img&id={$doc->get_doc_id()}&w=280">
 				<input type="hidden" name="id" class="input_id_citation" value="{$doc->get_type()}">
@@ -214,7 +209,7 @@
 			J('#upload-url-retour').val('?t=saisie_base&id='+id_observation);
 			J('#bobs-cit-upload').dialog();
 		}
-		
+
 		function obs_cloner() {
 			if (J('#bobs-dupl-date').val().length == 10) {
 				document.location.href='?t=saisie_dupliquer&date='+J('#bobs-dupl-date').val()+'&id='+J('#bobs-dupl-obs').val();
@@ -222,7 +217,7 @@
 				alert('date invalide')
 			}
 		}
-	    
+
 		function diag_obs_cloner() {
 			J('#bobs-dupl-date').datepicker();
 			J('#bobs-dupl-diag').dialog({buttons: {"Dupliquer": obs_cloner}});
@@ -240,10 +235,10 @@
 		J('#duplobs').click(function () { diag_obs_cloner();});
 		J('#bobs-sb-hd-btn').button();
 		J('#bobs-sb-hd-btn').click(function () { dialog_heure_duree(); });
-		
+
 		// Bouton ajouter un commentaire
 		J('#bobs-comtr-add-btn').button();
-		J('#bobs-comtr-add-btn').click(function () { 
+		J('#bobs-comtr-add-btn').click(function () {
 			J('#bobs-ajout-commentaire').dialog({
 				buttons: {
 					"Ajouter": function () {
@@ -272,7 +267,7 @@
 			autoOpen: false,
 			minWidth: 500,
 			width: 500,
-			buttons: { 
+			buttons: {
 				"Supprimer": function() {
 					if (confirm("Confirmer la suppression")) {
 						var id_citation = J('#cid').val();
@@ -288,7 +283,7 @@
 					}
 					enregistre_formulaire_commentaire();
 					enregistre_formulaire_enquete(id_citation);
-					J(this).dialog('close'); 
+					J(this).dialog('close');
 					J('#citation'+id_citation).parent().html("actualisation...").load('?t=saisie_citation&cid='+id_citation+'&oid={/literal}{$observation->id_observation}{literal}');
 				}
 			}
@@ -376,14 +371,14 @@
 			J.ajax({
 				async: false,
 				url:'?t=json&a=citation_formulaire_part1&'+s,
-				success: function (data,texte,req) { 
+				success: function (data,texte,req) {
 					if (data.match(/^\d+/))
 						J('#bobs-saisie-ed-f-p').html("enregistrement terminé");
 					else
 						J('#bobs-saisie-ed-f-p').html("erreur d'enregistrement !");
 				},
-				error: function (req,text,err) { 
-					J('#bobs-saisie-ed-f-p').html(err); 
+				error: function (req,text,err) {
+					J('#bobs-saisie-ed-f-p').html(err);
 					return false;
 				}
 			});
@@ -395,7 +390,7 @@
 			var s = J('#bobs-saisie-ed-c-p1').serialize();
 			J.ajax({
 				url:'?t=json&a=citation_formulaire_commentaire&'+s,
-				success: function (data,texte,req) { 
+				success: function (data,texte,req) {
 					if (data.match(/^\d+/))
 						J('#bobs-saisie-ed-c-p').html("enregistrement terminé");
 					else
@@ -432,7 +427,7 @@
 			params['a'] = 'citation_formulaire_enquete';
 			J.ajax({
 				url:'?'+J.param(params),
-				success: function (data,texte,req) { 
+				success: function (data,texte,req) {
 					if (!data.match(/^\d+/))
 						alert('problème enregistrement données enquête');
 				},
@@ -506,14 +501,14 @@
 				}
 			});
 		}
-		
+
 		function supprimer_observation(id_observation) {
 			diag = J('#bobs-sb-dialog-so');
 			diag.attr('id_observation', id_observation);
 			diag.dialog({
 				modal: true,
 				buttons: {
-					'Supprimer': function () { 
+					'Supprimer': function () {
 						J.ajax({
 							url: '?'+J.param({
 								t: 'json',
@@ -538,7 +533,7 @@
 			J.ajax({
 				async: false,
 				url:'?t=json&a=observation_valider&oid='+id_observation,
-				success: function (data,texte,req) { 
+				success: function (data,texte,req) {
 					if (data.match(/^OK/)) {
 						document.location.href = '?t='+masque;
 					} else {
@@ -548,7 +543,7 @@
 				error: function (req,text,err) { J('#bobs-saisie-ed-f-p').html(err); }
 			});
 		}
- 
+
 
 		function supprimer_observateur(id_utilisateur) {
 			if (confirm("Supprimer l'observateur de cette liste")) {

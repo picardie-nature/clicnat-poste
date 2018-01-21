@@ -1,5 +1,29 @@
 <?php
-/* vim: set tabstop=4 noexpandtab: */
+namespace Picnat\Clicnat;
+
+use Picnat\Clicnat\ExtractionsConditions\bobs_ext_c_annee;
+use Picnat\Clicnat\ExtractionsConditions\bobs_ext_c_brouillard;
+use Picnat\Clicnat\ExtractionsConditions\bobs_ext_c_classe;
+use Picnat\Clicnat\ExtractionsConditions\bobs_ext_c_commune;
+use Picnat\Clicnat\ExtractionsConditions\bobs_ext_c_departement;
+use Picnat\Clicnat\ExtractionsConditions\bobs_ext_c_epci;
+use Picnat\Clicnat\ExtractionsConditions\bobs_ext_c_espece;
+use Picnat\Clicnat\ExtractionsConditions\bobs_ext_c_interval_date;
+use Picnat\Clicnat\ExtractionsConditions\bobs_ext_c_liste_especes;
+use Picnat\Clicnat\ExtractionsConditions\bobs_ext_c_mois;
+use Picnat\Clicnat\ExtractionsConditions\bobs_ext_c_observateur;
+use Picnat\Clicnat\ExtractionsConditions\bobs_ext_c_ordre;
+use Picnat\Clicnat\ExtractionsConditions\bobs_ext_c_poly;
+use Picnat\Clicnat\ExtractionsConditions\bobs_ext_c_precision_date_max;
+use Picnat\Clicnat\ExtractionsConditions\bobs_ext_c_reseau;
+use Picnat\Clicnat\ExtractionsConditions\bobs_ext_c_sans_tag_invalide;
+use Picnat\Clicnat\ExtractionsConditions\bobs_ext_c_structure;
+use Picnat\Clicnat\ExtractionsConditions\bobs_ext_c_tag_protocole;
+use Picnat\Clicnat\ExtractionsConditions\bobs_ext_c_tag_structure;
+use Picnat\Clicnat\ExtractionsConditions\bobs_ext_c_taxon_branche;
+use Picnat\Clicnat\ExtractionsConditions\bobs_ext_c_zps;
+use Picnat\Clicnat\ExtractionsConditions\bobs_ext_c_zsc;
+
 /**
  * Poste d'observation
  *
@@ -12,29 +36,29 @@
  **/
 
 $start_time = microtime(true);
+require_once(__DIR__."/../vendor/autoload.php");
 
-if (!defined('CONFIG_FILE'))
+if (!defined('CONFIG_FILE')) {
 	define('CONFIG_FILE', '/etc/baseobs/config.php');
+}
 
 if (file_exists('config.php')) {
 	require_once('config.php');
 } else {
-	if (!file_exists(CONFIG_FILE))
+	if (!file_exists(CONFIG_FILE)) {
 		die('Ne peut ouvrir le fichier de configuration '.CONFIG_FILE);
-
+	}
 	require_once(CONFIG_FILE);
 }
-if (!defined('INSTALL'))
+
+if (!defined('INSTALL')) {
 	define('INSTALL', 'picnat');
+}
 
-if (!defined('POSTE_BASE_URL')) 
-	define('POSTE_BASE_URL', 'http://poste.obs.picardie-nature.org/');
+if (!defined('POSTE_BASE_URL'))      define('POSTE_BASE_URL', 'http://poste.obs.picardie-nature.org/');
+if (!defined('POSTE_MAIL_SUPPORT'))  define('POSTE_MAIL_SUPPORT', 'support@picardie-nature.org');
 
-if (!defined('POSTE_MAIL_SUPPORT')) 
-	define('POSTE_MAIL_SUPPORT', 'support@picardie-nature.org');
-
-if (!file_exists(SMARTY_COMPILE_POSTE))
-	mkdir(SMARTY_COMPILE_POSTE);
+if (!file_exists(SMARTY_COMPILE_POSTE))  mkdir(SMARTY_COMPILE_POSTE);
 
 define('TITRE_PAGE', "Base d'observations - Observateur");
 define('TITRE_H1', 'Picardie-Nature');
@@ -49,58 +73,25 @@ define('BOBS_POSTE_VS_X', 'poste_last_x');
 define('BOBS_POSTE_VS_Y', 'poste_last_y');
 define('BOBS_POSTE_VS_Z', 'poste_last_zoom');
 
-require_once(OBS_DIR.'smarty.php');
-require_once(OBS_DIR.'utilisateur.php');
-require_once(OBS_DIR.'reseau.php');
-require_once(OBS_DIR.'espace.php');
-require_once(OBS_DIR.'espece.php');
-require_once(OBS_DIR.'docs.php');
-require_once(OBS_DIR.'chr.php');
-require_once(OBS_DIR.'citations.php');
-require_once(OBS_DIR.'observations.php');
-require_once(OBS_DIR.'tags.php');
-require_once(OBS_DIR.'extractions.php');
-require_once(OBS_DIR.'extractions-conditions.php');
-require_once(OBS_DIR.'calendriers.php');
-require_once(OBS_DIR.'rss.php');
-require_once(OBS_DIR.'selection.php');
-
 $context = "poste";
-
-class critere_reseau_papillon extends bobs_extractions_conditions {
-	function __construct() {
-		parent::__construct();
-	}
-
-	public function __toString() {
-		return '';
-	}
-
-	static public function get_titre() {
-		return '';
-	}
-
-	public function get_sql() {
-		return "especes.classe='I' and especes.ordre ilike 'l%pidopt%'";
-	}
-
-	public function get_tables() {
-		return array('especes');
-	}
-}
-
-class ExceptionErrAuth extends Exception {}
-Class ExceptionReglement extends Exception {}
 
 /**
  * @brief Site de saisie
  */
 class Poste extends clicnat_smarty {
-	function __construct($db) {
+	protected $alertes;
+	protected $bobs_msgs;
+
+	public function __construct($db) {
+		if (!file_exists(SMARTY_TEMPLATE_POSTE)) {
+			throw new \Exception("templates ".SMARTY_TEMPLATE_POSTE);
+		}
 		parent::__construct($db, SMARTY_TEMPLATE_POSTE, SMARTY_COMPILE_POSTE, SMARTY_CONFIG_POSTE);
 		$this->cache_dir = '/tmp/cache_poste';
-		if (!file_exists('/tmp/cache_poste')) mkdir('/tmp/cache_poste');
-		
+		if (!file_exists('/tmp/cache_poste')) {
+			mkdir('/tmp/cache_poste');
+		}
+		$this->alertes = [];
 	}
 
 	private function template($selection_tpl = false) {
@@ -112,19 +103,25 @@ class Poste extends clicnat_smarty {
 		$this->assign('app_titre', TITRE_PAGE);
 		$this->assign('titre_h1', TITRE_H1);
 		$this->assign('titre_h2', TITRE_H2);
-		$this->assign('google_key', GOOGLE_KEY_POSTE);
 		$this->assign('format_date_complet', FORMAT_DATE_COMPLET);
 		$this->assign('format_date_moisjour', FORMAT_DATE_MOISJOUR);
 		$this->assign('install', INSTALL);
+		$this->assign('usedatatable', false);
+		$this->assign('usemap', false);
+		$this->assign('useplusone', false);
+		$this->assign('usejqplot', false);
+		$this->assign('google_key', "");
 	}
 
 	protected function session() {
 		session_start();
 		$this->assign('auth_ok', false);
 		if (array_key_exists(SESS, $_SESSION)) {
-			if (array_key_exists('auth_ok', $_SESSION[SESS]))
-				if ($_SESSION[SESS]['auth_ok']) 
+			if (array_key_exists('auth_ok', $_SESSION[SESS])) {
+				if ($_SESSION[SESS]['auth_ok']) {
 					$this->assign('auth_ok', true);
+				}
+			}
 		} else {
 			$_SESSION[SESS] = array('auth_ok' => false);
 		}
@@ -211,7 +208,6 @@ class Poste extends clicnat_smarty {
 					$this->assign_by_ref('espaces_structure', $espace_structure);
 					break;
 				case 'bobs_ext_c_liste_especes':
-					require_once(OBS_DIR.'liste_espece.php');
 					$liste_a = clicnat_listes_especes::liste_public($this->db);
 					$liste_b = clicnat_listes_especes::liste($this->db, $u->id_utilisateur);
 					$u = $this->get_user_session();
@@ -369,8 +365,8 @@ class Poste extends clicnat_smarty {
 				$this->assign('auth_ok', true);
 				$this->assign('messageinfo', 'Bienvenue');
 
-				$redir = '?t=accueil';				
-				if (!empty($_POST['redir'])) 
+				$redir = '?t=accueil';
+				if (!empty($_POST['redir']))
 					$redir = str_replace('"', '', $_POST['redir']);
 				$this->assign('redir', $redir);
 
@@ -420,9 +416,9 @@ class Poste extends clicnat_smarty {
 				$this->assign('msg_mdp', "Adresse e-mail introuvable, vérifier votre adresse ou contactez nous <!-- {$e->getMessage()} -->");
 			}
 		}
-		
+
 		$this->assign('u', $this->get_user_session());
-		
+
 		if ($_SESSION[SESS]['auth_ok'] == true) {
 			$u = $this->get_user_session();
 			$extr = new bobs_extractions($this->db);
@@ -452,7 +448,6 @@ class Poste extends clicnat_smarty {
 		}
 	}
 	protected function before_listes_especes() {
-		require_once(OBS_DIR.'liste_espece.php');
 		$u = $this->get_user_session();
 		if (array_key_exists('nouveau_nom', $_POST)) {
 			bobs_tests::cls($_POST['nouveau_nom'], bobs_tests::except_si_vide);
@@ -461,7 +456,6 @@ class Poste extends clicnat_smarty {
 	}
 
 	protected function before_listes_espaces() {
-		require_once(OBS_DIR.'liste_espace.php');
 		$u = $this->get_user_session();
 		if (array_key_exists('nouveau_nom', $_POST)) {
 			bobs_tests::cls($_POST['nouveau_nom'], bobs_tests::except_si_vide);
@@ -471,7 +465,6 @@ class Poste extends clicnat_smarty {
 	}
 
 	protected function before_liste_espece() {
-		require_once(OBS_DIR.'liste_espece.php');
 		$u = $this->get_user_session();
 		$l = new clicnat_listes_especes($this->db, $_GET['id']);
 		if ($l->id_utilisateur != $u->id_utilisateur) {
@@ -506,7 +499,6 @@ class Poste extends clicnat_smarty {
 	}
 
 	protected function before_liste_espace_carte() {
-		require_once(OBS_DIR.'liste_espace.php');
 		$u = $this->get_user_session();
 		$l = new clicnat_listes_espaces($this->db, $_GET['id']);
 		if (($l->ref == true) or ($l->id_utilisateur == $u->id_utilisateur)) {
@@ -516,7 +508,6 @@ class Poste extends clicnat_smarty {
 		}
 	}
 	protected function before_liste_espace_carte_fs() {
-		require_once(OBS_DIR.'liste_espace.php');
 		$u = $this->get_user_session();
 		$l = new clicnat_listes_espaces($this->db, $_GET['id']);
 		if (($l->ref == true) or ($l->id_utilisateur == $u->id_utilisateur)) {
@@ -528,7 +519,6 @@ class Poste extends clicnat_smarty {
 
 
 	protected function before_amphibiens_reptiles_carto() {
-		require_once(OBS_DIR.'liste_espace.php');
 		$passages = new clicnat_listes_espaces($this->db, 2);
 		$pointsnoirs = new clicnat_listes_espaces($this->db, 3);
 		$this->assign_by_ref('passages', $passages);
@@ -536,8 +526,6 @@ class Poste extends clicnat_smarty {
 	}
 
 	protected function before_liste_espace_carte_wfs() {
-		require_once(OBS_DIR.'liste_espace.php');
-		require_once(OBS_DIR.'wfs.php');
 		$data = file_get_contents('php://input'); // contenu de _POST
 		$doc = new DomDocument();
 		@$doc->loadXML($data);
@@ -728,7 +716,7 @@ class Poste extends clicnat_smarty {
 		echo json_encode($u->get_n_obs_par_mois($y));
 		exit();
 	}
-	
+
 	protected function before_espece_detail() {
 		$id = $_GET['id'];
 		self::cli($id, bobs_tests::except_si_inf_1);
@@ -740,19 +728,19 @@ class Poste extends clicnat_smarty {
 		$espece = get_espece($this->db, $id);
 		$chaine_md5 = sprintf("%s%s", empty($espece->ordre)?'NULL':$espece->ordre, $espece->classe);
 		$this->assign('md5_ordre', md5($chaine_md5));
-		$this->assign_by_ref('esp', $espece);		
-		$this->assign('usemap', true);	
+		$this->assign_by_ref('esp', $espece);
+		$this->assign('usemap', true);
 		$this->assign('borne_a', intval(strftime("%Y"))-5);
 		$this->assign('borne_b', intval(strftime("%Y"))-10);
-		$ext_mes_obs = new bobs_extractions($this->db);		
+		$ext_mes_obs = new bobs_extractions($this->db);
 		$ext_mes_obs->ajouter_condition(new bobs_ext_c_observateur($u->id_utilisateur));
 		$ext_mes_obs->ajouter_condition(new bobs_ext_c_espece($espece->id_espece));
 		$this->assign_by_ref('mes_obs', $ext_mes_obs);
 	}
-	
+
 	protected function before_ch() {
 		$comite = get_chr($this->db, $_GET['id']);
-		$this->assign_by_ref('comite', $comite);	
+		$this->assign_by_ref('comite', $comite);
 	}
 
 	protected function before_redirection_archives_geor() {
@@ -765,8 +753,8 @@ class Poste extends clicnat_smarty {
 			header("Location: http://archives.picardie-nature.org/?action=jeton_utilise&jeton=$jeton&suiv=$suiv");
 		}
 	}
-	protected function before_atlas_oiseaux_hivernants_espece() {	
-		$this->assign('usemap', true);	
+	protected function before_atlas_oiseaux_hivernants_espece() {
+		$this->assign('usemap', true);
 		$u = $this->get_user_session();
 		$espece = get_espece($this->db, $_GET['id']);
 		$this->assign_by_ref('esp', $espece);
@@ -795,7 +783,6 @@ class Poste extends clicnat_smarty {
 		}
 	}
 	protected function before_atlas_oiseaux_nicheurs_carte_resp() {
-		require_once(OBS_DIR.'aonfm.php');
 		$u = $this->get_user_session();
 		if ($u->membre_reseau('av')) {
 			$this->assign('usemap', true);
@@ -810,21 +797,20 @@ class Poste extends clicnat_smarty {
 	}
 
 	protected function before_atlas_oiseaux_nicheurs() {
-		require_once(OBS_DIR.'aonfm.php');
 		$u = $this->get_user_session();
 
 		if ($u->membre_reseau('av')) {
 			$this->caching = 2;
 			$this->cache_lifetime = 3600*8; // 8h
-			if (isset($_GET['recalcul'])) 
+			if (isset($_GET['recalcul']))
 				$this->clear_cache('atlas_oiseaux_nicheurs.tpl');
 			if (!$this->is_cached('atlas_oiseaux_nicheurs.tpl')) {
 					$this->assign('usemap', true);
-					
+
 					$this->assign('c_possible', bobs_aonfm::couleur_possible);
 					$this->assign('c_probable', bobs_aonfm::couleur_probable);
 					$this->assign('c_certain', bobs_aonfm::couleur_certain);
-					
+
 					$carres = bobs_espace_l93_10x10::tous($this->db);
 					$this->assign_by_ref('carres', $carres);
 					foreach ($carres as $car) {
@@ -841,7 +827,7 @@ class Poste extends clicnat_smarty {
 			$this->assign('pas_membre', true);
 		}
 	}
-	
+
 	protected function before_atlas_oiseaux_nicheurs_xml() {
 		if (!file_exists('/tmp/aonfm.xml'))
 			throw new Exception('pas généré...');
@@ -858,22 +844,22 @@ class Poste extends clicnat_smarty {
 		exit();
 	}
 
-	
+
 	protected function before_atlas_oiseaux_nicheurs_espece() {
 		require_once(OBS_DIR.'aonfm.php');
-		
+
 		$u = $this->get_user_session();
 		$espece = get_espece($this->db, (int)$_GET['id']);
 		$this->assign_by_ref('espece', $espece);
 		if ($u->membre_reseau('av')) {
 			$this->assign('usemap', true);
-			
+
 			$carres = bobs_aonfm::carres_espece($this->db, $espece->id_espece);
-			
+
 			$this->assign('c_possible', bobs_aonfm::couleur_possible);
 			$this->assign('c_probable', bobs_aonfm::couleur_probable);
 			$this->assign('c_certain', bobs_aonfm::couleur_certain);
-			
+
 			$this->assign_by_ref('carres', $carres);
 			$this->assign('pas_membre', false);
 		} else {
@@ -883,7 +869,6 @@ class Poste extends clicnat_smarty {
 
 
 	protected function before_atlas_oiseaux_nicheurs_r_carre() {
-		require_once(OBS_DIR.'aonfm.php');
 		if (array_key_exists('nom', $_GET)) {
 			$esp = bobs_espace_l93_10x10::get_by_nom($this->db, $_GET['nom']);
 			if ($esp)
@@ -899,7 +884,7 @@ class Poste extends clicnat_smarty {
 				if ($espece->classe != 'O') {
 					throw new Exception('que des oiseaux');
 				}
-				$ok = false; 
+				$ok = false;
 				foreach ($u->liste_carre_atlas() as $c) {
 					if ($c['id_espace'] == $_GET['id_espace']) {
 						$ok = $c['decideur_aonfm'] == 't';
@@ -936,7 +921,6 @@ class Poste extends clicnat_smarty {
 	}
 
 	protected function before_altas_oiseaux_nicheurs_r_carre_get_abondance() {
-		require_once(OBS_DIR.'aonfm.php');
 		$u = $this->get_user_session();
 		// tester si proprio du carré
 		$ok = false;
@@ -956,7 +940,6 @@ class Poste extends clicnat_smarty {
 	}
 
 	protected function before_altas_oiseaux_nicheurs_r_carre_enreg_abondance() {
-		require_once(OBS_DIR.'aonfm.php');
 		$u = $this->get_user_session();
 		// tester si proprio du carré
 		$ok = false;
@@ -989,7 +972,6 @@ class Poste extends clicnat_smarty {
 	}
 
 	protected function before_atlas_oiseaux_nicheurs_r_carre_enreg() {
-		require_once(OBS_DIR.'aonfm.php');
 		$u = $this->get_user_session();
 		// tester si proprio du carré
 		$ok = false;
@@ -1018,7 +1000,6 @@ class Poste extends clicnat_smarty {
 	}
 
 	protected function before_atlas_oiseaux_nicheurs_r_espece() {
-		require_once(OBS_DIR.'aonfm.php');
 		self::cli($_GET['id_espece']);
 		$espece = get_espece($this->db, $_GET['id_espece']);
 		$this->assign_by_ref('espece', $espece);
@@ -1058,7 +1039,7 @@ class Poste extends clicnat_smarty {
 		$this->assign('c_probable', bobs_aonfm::couleur_probable);
 		$this->assign('c_certain', bobs_aonfm::couleur_certain);
 	}
-	
+
 	protected function before_selections() {
 		$u = $this->get_user_session();
 		$msgs = array();
@@ -1087,7 +1068,7 @@ class Poste extends clicnat_smarty {
 							break;
 					}
 				}
-			}	
+			}
 		}
 		if (count($selections_pour_fusion) > 0) {
 			$nom = "Fusion de ";
@@ -1132,7 +1113,6 @@ class Poste extends clicnat_smarty {
 			case 'nicheur':
 				//$a = new bobs_selection_extraction_nicheurs($this->db);
 				//$a->set('id_selection', $s->id_selection);
-				require_once(OBS_DIR.'/taches.php');
 				$now = strftime("%Y-%m-%d %H:%M:%S",mktime());
 				$tache = clicnat_tache::ajouter($this->db, $now, $_SESSION[SESS]['id_utilisateur'], "Extraction nicheur sélection {$s}", 'clicnat_selection_tr_nicheur', ['id_selection' => $s->id_selection]);
 				print_r($tache);
@@ -1230,7 +1210,6 @@ class Poste extends clicnat_smarty {
 	}
 
 	protected function before_selection_wfs() {
-		require_once(OBS_DIR.'wfs.php');
 		$data = file_get_contents('php://input'); // contenu de _POST
 		$doc = new DomDocument();
 		@$doc->loadXML($data);
@@ -1361,7 +1340,7 @@ class Poste extends clicnat_smarty {
 
 		if (array_key_exists('toponyme', $_GET))
 			$opts['toponyme'] = 1;
-		if (array_key_exists('xy', $_GET)) 
+		if (array_key_exists('xy', $_GET))
 			$opts['xy'] = 1;
 
 		if (isset($_GET['enq']) && !empty($_GET['enq'])) {
@@ -1432,22 +1411,22 @@ class Poste extends clicnat_smarty {
 	const especes_n_resultats_tri_n_citations = 17;
 
 	// Prototype (js)
-	protected function before_espece_autocomplete() {	
+	protected function before_espece_autocomplete() {
 		$u = $this->get_user_session();
 		$recherche_vernaculaire = true;
-		
+
 		if (preg_match('/sc:? (.*)$/', $_POST['espece'], $res)) {
 			$_POST['espece'] = $res[1];
 			$recherche_vernaculaire = false;
 		}
-		
+
 		$_POST['espece'] = str_replace(array('&','"', '(', ')', '@', '+', ':', '.'),' ',$_POST['espece']);
 		$_POST['espece'] = self::cls($_POST['espece']);
-		
+
 		if (empty($_POST['espece'])) {
 			return false;
 		}
-		
+
 		if ($recherche_vernaculaire) {
 			try {
 				$especes_v = bobs_espece::recherche_par_nom($this->db, $_POST['espece'],$u->expert);
@@ -1455,10 +1434,10 @@ class Poste extends clicnat_smarty {
 				echo "...";
 			}
 		}
-		
+
 		if (!is_array($especes_v))
 			$especes_v = array();
-		
+
 		$t_obj = bobs_espece::index_recherche($this->db, $_POST['espece']);
 		$especes_s = array();
 
@@ -1475,8 +1454,8 @@ class Poste extends clicnat_smarty {
 			$especes_s[] = array(
 				'id_espece' => $obj->id_espece,
 				'nom_f' => $obj->nom_f,
-				'nom_s' => $obj->nom_s, 
-				'classe' => $obj->classe, 
+				'nom_s' => $obj->nom_s,
+				'classe' => $obj->classe,
 				'n_citations' => $obj->n_citations
 			);
 		}
@@ -1493,21 +1472,19 @@ class Poste extends clicnat_smarty {
 		$this->assign_by_ref('rech', $_POST['espece']);
 		$this->assign_by_ref('especes', $especes);
 	}
- 
+
 	// jquery
 	protected function before_espece_inpn_autocomplete() {
 		bobs_element::cls($_GET['term']);
-		require_once(OBS_DIR.'espece.php');
-		$r = array();
+		$r = [];
 		$t_obj = bobs_espece_inpn::index_recherche($this->db, $_GET['term']);
 		foreach ($t_obj['especes'] as $obj) {
-			$r[] = array(
-		    		'label'=> "{$obj->lb_nom} <i>{$obj->lb_auteur}</i>", 
+			$r[] = [
+				'label'=> "{$obj->lb_nom} <i>{$obj->lb_auteur}</i>",
 				'value' => $obj->cd_nom,
 				'classe' => '',
 				'n_citations' => 0
-			);
-
+			];
 		}
 		echo json_encode($r);
 		exit();
@@ -1515,29 +1492,36 @@ class Poste extends clicnat_smarty {
 
 	// jquery
 	protected function before_observateur_autocomplete2() {
-	    bobs_element::cls($_GET['term']);
-	    $t = bobs_utilisateur::rechercher2($this->db, $_GET['term']);
-	    $tt = array();
-	    if (is_array($t))
-		foreach ($t as $l)
-		    $tt[] = array('label'=>$l->nom.' '.$l->prenom, 'id'=>$l->id_utilisateur);
-	    echo json_encode($tt);
-	    exit();
+		bobs_element::cls($_GET['term']);
+		$t = bobs_utilisateur::rechercher2($this->db, $_GET['term']);
+		$tt = [];
+		if (is_array($t)) {
+			foreach ($t as $l) {
+				$tt[] = [
+					'label' => $l->nom.' '.$l->prenom,
+					'id'=>$l->id_utilisateur
+				];
+			}
+		}
+		echo json_encode($tt);
+		exit();
 	}
-	
+
 	// jquery
 	protected function before_tag_citations_autocomplete() {
 		bobs_element::cls($_GET['term']);
 		$t = bobs_tags::recherche_tag_citation($this->db, $_GET['term']);
-		$tt = array();
-		if (is_array($t)) 
-			foreach ($t as $tag) 
-				if (!$tag->categorie_simple) 
-					$tt[] = array(
+		$tt = [];
+		if (is_array($t))
+			foreach ($t as $tag) {
+				if (!$tag->categorie_simple) {
+					$tt[] = [
 						'label' => $tag->lib,
 						'id' => $tag->id_tag,
 						'levenshtein' => levenshtein($_GET['term'], $tag->lib)
-					);
+					];
+				}
+			}
 		function mysort($a,$b) {
 			if ($a['levenshtein'] == $b['levenshtein'])
 				return 0;
@@ -1549,14 +1533,19 @@ class Poste extends clicnat_smarty {
 	}
 
 	protected function before_observateurs_proche() {
-	    $u = $this->get_user_session();
-	    $t = $u->observateurs_proche();
-	    $tt = array();
-	    if (is_array($t))
-		foreach ($t as $l)
-		    $tt[] = array('label'=>$l->nom.' '.$l->prenom, 'id'=>$l->id_utilisateur);
-	    echo json_encode($tt);
-	    exit();
+		$u = $this->get_user_session();
+		$t = $u->observateurs_proche();
+		$tt = [];
+		if (is_array($t)) {
+			foreach ($t as $l) {
+				$tt[] = [
+					'label' => $l->nom.' '.$l->prenom,
+					'id'    => $l->id_utilisateur
+				];
+			}
+		}
+		echo json_encode($tt);
+		exit();
 	}
 
 
@@ -1579,7 +1568,7 @@ class Poste extends clicnat_smarty {
 		}
 		exit();
 	}
-	
+
 	protected function before_chiro_espace_detail() {
 		$u = $this->get_user_session();
 		if ($u->acces_chiros) {
@@ -1611,23 +1600,24 @@ class Poste extends clicnat_smarty {
 	}
 
 	protected function before_chiro_saisie() {
-	    $u = $this->get_user_session();
-	    if ($u->acces_chiros) {
-		$cavite = get_espace_chiro($this->db, $_GET['id']);
-		$this->assign_by_ref('cavite', $cavite);
-		$especes = array();
-		$liste_especes = array(
-		    1049, 3238, 1070,  240,  215,
-		     927, 3237, 1069,  211,  702,
-		     841,  214, 3297, 1073, 1072,
-		    3296,  706,  231,  704,  241,
-		     929, 1075,  229, 3236, 1083,
-		    1057, 3312,  164
-		);
-		foreach ($liste_especes as $id)
-		    $especes[] = get_espece($this->db, $id);
-		$this->assign_by_ref('especes', $especes);
-	    }
+		$u = $this->get_user_session();
+		if ($u->acces_chiros) {
+			$cavite = get_espace_chiro($this->db, $_GET['id']);
+			$this->assign_by_ref('cavite', $cavite);
+			$especes = [];
+			$liste_especes = [
+			    1049, 3238, 1070,  240,  215,
+			     927, 3237, 1069,  211,  702,
+			     841,  214, 3297, 1073, 1072,
+			    3296,  706,  231,  704,  241,
+			     929, 1075,  229, 3236, 1083,
+			    1057, 3312,  164
+			];
+			foreach ($liste_especes as $id) {
+				$especes[] = get_espece($this->db, $id);
+			}
+			$this->assign_by_ref('especes', $especes);
+		}
 	}
 
 	protected function before_chiro_espace_sauve() {
@@ -1654,15 +1644,15 @@ class Poste extends clicnat_smarty {
 			}
 		    }
 		}
-		if ($modif)
-		    $espace->date_modif_maj();
-
+		if ($modif) {
+			$espace->date_modif_maj();
+		}
 		echo "OK";
 		exit();
 	}
 
 	protected function before_chiro_espace_detail2() {
-		$u = $this->get_user_session();		
+		$u = $this->get_user_session();
 		if ($u->acces_chiros) {
 			$espace = get_espace_chiro($this->db, $_GET['id']);
 			switch ($_GET['act']) {
@@ -1689,7 +1679,7 @@ class Poste extends clicnat_smarty {
 			$this->assign_by_ref('calendriers', $calendriers);
 			$this->assign_by_ref('espace', $espace);
 			$this->assign_by_ref('observations', $observations);
-		}		
+		}
 	}
 
 	protected function before_chiros_who() {
@@ -1721,19 +1711,19 @@ class Poste extends clicnat_smarty {
 	protected function before_chiros_enregistre_point() {
 		$u = $this->get_user_session();
 		if ($u->acces_chiros) {
-		    $data = array(
+			$data = [
 				'id_utilisateur' => $u->id_utilisateur,
 				'reference' => '',
 				'nom' => '',
 				'x' => $_GET['x'],
 				'y' => $_GET['y']
-		    );
-		    $new_id = bobs_espace_chiro::insert($this->db, $data);
-		    bobs_log("espace_chiro utl={$u->id_utilisateur} espace={$new_id} action=creation_espace");
-		    echo $new_id;
-		    exit();
+			];
+			$new_id = bobs_espace_chiro::insert($this->db, $data);
+			bobs_log("espace_chiro utl={$u->id_utilisateur} espace={$new_id} action=creation_espace");
+			echo $new_id;
+			exit();
 		} else {
-		    throw new Exception('pas membre chiro');
+			throw new \Exception('pas membre chiro');
 		}
 	}
 
@@ -1741,58 +1731,60 @@ class Poste extends clicnat_smarty {
 	    if ($this->get_user_session()->acces_chiros) {
 			bobs_element::query($this->db, 'begin');
 			$date_observation = bobs_element::date_fr2sql($_GET['date_observation']);
-			$data = array(
-			    'id_espace' => self::cli($_GET['id_espace']),
-			    'date_observation' => self::cls($date_observation),
-			    'table_espace' => 'espace_chiro',
-			    'id_utilisateur' => $this->get_user_session()->id_utilisateur
-			);
+			$data = [
+				'id_espace' => self::cli($_GET['id_espace']),
+				'date_observation' => self::cls($date_observation),
+				'table_espace' => 'espace_chiro',
+				'id_utilisateur' => $this->get_user_session()->id_utilisateur
+			];
 			if (empty($data['id_utilisateur'])) {
-			    throw new Exception('pas sans auteur');
+			    throw new \Exception('pas sans auteur');
 			}
 			$id_observation = bobs_observation::insert($this->db, $data);
 			echo "Création observation #$id_observation<br/>";
 			$observation = new bobs_observation($this->db, $id_observation);
 			$u = $this->get_user_session();
-			
+
 			$prospection_negative = false;
 			$prospection_positive = false;
-			
+
 			foreach ($_GET as $k => $id) {
-			    if (preg_match('/^u([0-9]*)/', $k, $m)) {
+				if (preg_match('/^u([0-9]*)/', $k, $m)) {
 					echo "Ajoute observateur #$id<br/>";
 					$observation->add_observateur($id);
-			    } else if (($k == 'prospection_negative') && ($id == '1')) { 
-			    	// @FIXME référence a une espèce sans configuration
-			    	if ($prospection_positive)
-			    		throw new Exception('On ne peut pas noter -1 sp si un chiro a été vu');
-			    	$prospection_negative = true;
-			    	$id_citation = $observation->add_citation(164); // chiro sp
-			    	$citation = new bobs_citation($this->db, $id_citation);
-			    	$citation->set_effectif(-1);
-			    	$u->add_citation_authok($id_citation);
-			    } else if (preg_match('/effectif_([0-9]*)/', $k, $m)) {
+				} else if (($k == 'prospection_negative') && ($id == '1')) {
+					// @FIXME référence a une espèce sans configuration
+					if ($prospection_positive) {
+						throw new \Exception('On ne peut pas noter -1 sp si un chiro a été vu');
+					}
+					$prospection_negative = true;
+					$id_citation = $observation->add_citation(164); // chiro sp
+					$citation = new bobs_citation($this->db, $id_citation);
+					$citation->set_effectif(-1);
+					$u->add_citation_authok($id_citation);
+				} else if (preg_match('/effectif_([0-9]*)/', $k, $m)) {
 					$id_espece = $m[1];
 					$eff = self::cli($id);
 					if ($eff > 0) {
-					    echo "Ajoute espèce #$id_espece avec un effectif de $eff<br/>";
-					    if ($prospection_negative)
-					    	throw new Exception('On ne peut pas noter -1 sp si un chiro a été vu');					    
-					    $prospection_positive = true;
-					    $id_citation = $observation->add_citation($id_espece);
-					    $citation = new bobs_citation($this->db, $id_citation);
-					    $citation->set_effectif($eff);
-					    $u->add_citation_authok($id_citation);
+						echo "Ajoute espèce #$id_espece avec un effectif de $eff<br/>";
+						if ($prospection_negative) {
+							throw new \Exception('On ne peut pas noter -1 sp si un chiro a été vu');
+						}
+						$prospection_positive = true;
+						$id_citation = $observation->add_citation($id_espece);
+						$citation = new bobs_citation($this->db, $id_citation);
+						$citation->set_effectif($eff);
+						$u->add_citation_authok($id_citation);
 					}
-			    }
+				}
 			}
 			$observation->send();
 			bobs_element::query($this->db, 'commit');
-			
+
 			exit();
-	    } else {
-			throw new Exception('pas membre chiro');
-	    }
+		} else {
+			throw new \Exception('pas membre chiro');
+		}
 	}
 
 	protected function before_commune_autocomplete() {
@@ -1804,11 +1796,12 @@ class Poste extends clicnat_smarty {
 		$u = $this->get_user_session();
 		$observation = new bobs_observation($this->db, $_GET['id']);
 
-		if ($u->id_utilisateur != $observation->id_utilisateur) 
-			throw new Exception("Vous n'êtes pas l'auteur de cette observation");
-		if (!$observation->brouillard) 
-			throw new Exception("Cette observation a été envoyée et n'est plus modifiable");
-
+		if ($u->id_utilisateur != $observation->id_utilisateur) {
+			throw new \Exception("Vous n'êtes pas l'auteur de cette observation");
+		}
+		if (!$observation->brouillard) {
+			throw new \Exception("Cette observation a été envoyée et n'est plus modifiable");
+		}
 		$this->assign('masque', $_SESSION[SESS]['masque']);
 		$this->assign_by_ref('observation', $observation);
 		$this->assign_by_ref('s', get_config()->structures_ok_pour_saisie());
@@ -1819,10 +1812,12 @@ class Poste extends clicnat_smarty {
 		$u = $this->get_user_session();
 		$observation = new bobs_observation($this->db, $_GET['id']);
 
-		if ($u->id_utilisateur != $observation->id_utilisateur) 
+		if ($u->id_utilisateur != $observation->id_utilisateur) {
 			throw new Exception("Vous n'êtes pas l'auteur de cette observation");
-		if (!$observation->brouillard) 
+		}
+		if (!$observation->brouillard) {
 			throw new Exception("Cette observation a été envoyée et n'est plus modifiable");
+		}
 
 		$this->assign('masque', $_SESSION[SESS]['masque']);
 		$this->assign_by_ref('obs', $observation);
@@ -1834,8 +1829,9 @@ class Poste extends clicnat_smarty {
 	protected function before_structure_choix_toggle() {
 		self::cls($_GET['structure']);
 
-		if (!is_array($_SESSION[SESS][self::v_session_structures]))
-			$_SESSION[SESS][self::v_session_structures] = array();
+		if (!is_array($_SESSION[SESS][self::v_session_structures])) {
+			$_SESSION[SESS][self::v_session_structures] = [];
+		}
 
 		$pos = array_search($_GET['structure'], $_SESSION[SESS][self::v_session_structures]);
 		if ( $pos === false) {
@@ -1847,9 +1843,9 @@ class Poste extends clicnat_smarty {
 	}
 
 	protected function before_structure_choix_liste() {
-		if (!is_array($_SESSION[SESS][self::v_session_structures]))
-			$_SESSION[SESS][self::v_session_structures] = array();
-
+		if (!is_array($_SESSION[SESS][self::v_session_structures])) {
+			$_SESSION[SESS][self::v_session_structures] = [];
+		}
 		echo json_encode(array_values($_SESSION[SESS][self::v_session_structures]));
 		exit();
 	}
@@ -1889,13 +1885,13 @@ class Poste extends clicnat_smarty {
 	}
 
 	protected function before_saisie_citation_editeur() {
-		$liste_principaux_codes = array(
-		    '1000','5000','5500','5100','4000','1150','2100','2200','9120','1300',
-		    '2202','2210','3005','3010','3011','3012','3013','3014',
-		    '3020','3030','3031','1306','3033','3110','3111','3112',
-		    '3113','3114','3115','3116','3120','3121','3122','3140',
-		    '3150','3160','3170','3200','3210','3310','3320','3330',
-		);
+		$liste_principaux_codes = [
+			'1000','5000','5500','5100','4000','1150','2100','2200','9120','1300',
+			'2202','2210','3005','3010','3011','3012','3013','3014',
+			'3020','3030','3031','1306','3033','3110','3111','3112',
+			'3113','3114','3115','3116','3120','3121','3122','3140',
+			'3150','3160','3170','3200','3210','3310','3320','3330',
+		];
 		$u = $this->get_user_session();
 		$citation = $u->citation_brouillard($_GET['id']);
 		if ($citation->get_espece()->classe == 'M') {
@@ -1909,11 +1905,10 @@ class Poste extends clicnat_smarty {
 		foreach ($liste_principaux_codes as $code) {
 			try {
 				$principaux[] = bobs_tags::by_ref($this->db, $code);
-			} catch (Exception $e) {
+			} catch (\Exception $e) {
 				echo "<font color=red>$code est un tag non référencé</font><br/>";
 			}
 		}
-		require_once(OBS_DIR.'enquetes.php');
 		$enquetes = clicnat_enquete::enquetes_espece_derniere_version($this->db, $citation->id_espece);
 		if (count($enquetes) >=1 ) {
 			$this->assign_by_ref('enquete', $enquetes[0]);
@@ -1936,9 +1931,9 @@ class Poste extends clicnat_smarty {
 		$this->assign_by_ref('espece', $espece);
 		$output = $this->fetch('gnuplot/citations_nicheurs.plot');
 		$f_plotscript = tempnam("/tmp", "plot");
-		
+
 		file_put_contents($f_plotscript, $output);
-		
+
 		shell_exec('/usr/bin/gnuplot '.$f_plotscript.' > '.$f_plotscript.'.png');
 		header("Content-Type: image/png");
 		readfile($f_plotscript.'.png');
@@ -1999,7 +1994,7 @@ class Poste extends clicnat_smarty {
 				$u = $this->get_user_session();
 				$autorise = $u->acces_chiros_ok();
 				if ($autorise)
-					$espace = get_espace_chiro($this->db, $_GET['id_espace']); 
+					$espace = get_espace_chiro($this->db, $_GET['id_espace']);
 				break;
 			case 'espace_point':
 				$autorise = true;
@@ -2015,11 +2010,11 @@ class Poste extends clicnat_smarty {
 				break;
 
 		}
-		
+
 		if (!$autorise) {
 			exit();
 		}
-		
+
 		if (isset($espace)) {
 			echo $espace->get_geom();
 		}
@@ -2128,7 +2123,7 @@ class Poste extends clicnat_smarty {
 				case 'observation':
 					$u = $this->get_user_session();
 					$o = new bobs_observation($this->db, $_GET['id']);
-					if (!$o->id_observation) 
+					if (!$o->id_observation)
 						throw new Exception("problème de chargement ido:{$o->id_observation}");
 					if ($u->id_utilisateur != $o->id_utilisateur)
 						throw new Exception('pas auteur');
@@ -2160,14 +2155,14 @@ class Poste extends clicnat_smarty {
 					}
 					break;
 				case 'observation_set_liste_observateurs':
-					// arguments : 
+					// arguments :
 					//  $_GET['id'] : numéro de l'observation
 					//  $_GET['observateurs'] : chaine de caractere avec les numéro d'utilisateurs
 					//    exemple : "123,124,125"
 					$u = $this->get_user_session();
 					$obs_obj = new bobs_observation($this->db, $_GET['id']);
 					$data = array('ajoute'=>array(),'enleve'=>array());
-					if (!$obs_obj->id_observation) 
+					if (!$obs_obj->id_observation)
 						throw new Exception("problème de chargement ido:{$obs_obj->id_observation}");
 					if ($u->id_utilisateur != $obs_obj->id_utilisateur)
 						throw new Exception('pas auteur');
@@ -2439,7 +2434,7 @@ class Poste extends clicnat_smarty {
 					$observation = $u->observation_brouillard($_GET['oid']);
 					$espace = $observation->get_espace();
 					$pt = array(
-						'x' => $espace->get_x(), 
+						'x' => $espace->get_x(),
 						'y' => $espace->get_y(),
 						'id_espace' => $espace->id_espace,
 						'table_espace' => $espace->get_table()
@@ -2467,10 +2462,10 @@ class Poste extends clicnat_smarty {
 			$this->assign('data', json_encode($data));
 		}
 	}
-	
+
 	protected function before_avifaune_n_jours_commune() {
 		$commune = get_espace_commune($this->db, $_GET['id']);
-		if (!$commune) throw new Exception('Commune inconnue');
+		if (!$commune) throw new \Exception('Commune inconnue');
 		$this->assign_by_ref('commune', $commune);
 		$ex = new bobs_extractions($this->db);
 		$ex->ajouter_condition(new bobs_ext_c_classe('O'));
@@ -2481,7 +2476,7 @@ class Poste extends clicnat_smarty {
 
 	protected function before_pap_n_jours_commune() {
 		$commune = get_espace_commune($this->db, $_GET['id']);
-		if (!$commune) throw new Exception('Commune inconnue');
+		if (!$commune) throw new \Exception('Commune inconnue');
 		$this->assign_by_ref('commune', $commune);
 		$ex = new bobs_extractions($this->db);
 		$ex->ajouter_condition(new critere_reseau_papillon());
@@ -2494,21 +2489,21 @@ class Poste extends clicnat_smarty {
 		$u = $this->get_user_session();
 
 		if (!isset($_GET['reseau']))
-			throw new Exception('Précisez un réseau');
+			throw new \Exception('Précisez un réseau');
 
 		if (!$u->membre_reseau($_GET['reseau']))
-			throw new Exception("Pas membre du réseau");
+			throw new \Exception("Pas membre du réseau");
 
 		$reseau = new bobs_reseau($this->db, $_GET['reseau']);
 		$this->assign_by_ref('reseau', $reseau);
 
 		$commune = get_espace_commune($this->db, $_GET['id']);
 
-		if (!$commune)
-			throw new Exception('Commune inconnue');
-
+		if (!$commune) {
+			throw new \Exception('Commune inconnue');
+		}
 		$this->assign_by_ref('commune', $commune);
-		
+
 		$ex = new bobs_extractions($this->db);
 		$ex->ajouter_condition(new bobs_ext_c_reseau($reseau));
 		$ex->ajouter_condition(new bobs_ext_c_interval_date(strftime('%d/%m/%Y', mktime()-86400*$reseau->restitution_nombre_jours), strftime('%d/%m/%Y',mktime())));
@@ -2516,22 +2511,22 @@ class Poste extends clicnat_smarty {
 		$this->assign_by_ref('e', $ex);
 		$this->assign_by_ref('citations', $ex->get_citations());
 	}
-	
+
 	protected function before_reseau_n_jours_espece() {
 		$u = $this->get_user_session();
-	
+
 		if (!isset($_GET['reseau']))
-			throw new Exception('Précisez un réseau');
+			throw new \Exception('Précisez un réseau');
 		$reseau = new bobs_reseau($this->db, $_GET['reseau']);
 
 		if (!$u->membre_reseau($_GET['reseau']))
-			throw new Exception("Pas membre du réseau");
+			throw new \Exception("Pas membre du réseau");
 
 		$espece = get_espece($this->db, $_GET['id']);
 
-		if (!$espece) 
+		if (!$espece) {
 			throw new Exception('Espèce inconnue');
-
+		}
 		$this->assign_by_ref('espece', $espece);
 		$ex = new bobs_extractions($this->db);
 		$ex->ajouter_condition(new bobs_ext_c_reseau($reseau));
@@ -2566,7 +2561,7 @@ class Poste extends clicnat_smarty {
 		self::cls($_GET['carre']);
 
 		if (empty($_GET['carre']))
-		throw new InvalidArgumentException('nom carré ?');
+		throw new \InvalidArgumentException('nom carré ?');
 
 		$espace = bobs_espace_l93_10x10::get_by_nom($this->db, $_GET['carre']);
 		$this->assign_by_ref('espace', $espace);
@@ -2671,7 +2666,7 @@ class Poste extends clicnat_smarty {
 			}
 		}
 	}
-	
+
 	public function before_structure_referentiel_espece() {
 		// FIXME compte structure
 		require_once(OBS_DIR.'referentiel_tiers.php');
@@ -2688,7 +2683,7 @@ class Poste extends clicnat_smarty {
 		if (!empty($_GET['act'])) {
 			switch ($_GET['act']) {
 				case 'ajout':
-					$ref->ajoute($_POST['id_espece'], $_POST['id_tiers']);					
+					$ref->ajoute($_POST['id_espece'], $_POST['id_tiers']);
 					break;
 				case 'retirer':
 					$ref->supprime_reference_tiers($_GET['id_tiers']);
@@ -2697,7 +2692,7 @@ class Poste extends clicnat_smarty {
 					header("Content-Type: text/csv");
 					header("Content-disposition: filename=referentiel_{$ref->nom}.csv");
 					echo $ref->ligne_referentiel_csv_titres();
-					foreach ($ref->get_referentiel() as $l) {						
+					foreach ($ref->get_referentiel() as $l) {
 						echo iconv('utf8','latin1',$ref->ligne_referentiel_csv($l));
 					}
 					exit();
@@ -2710,12 +2705,12 @@ class Poste extends clicnat_smarty {
 			$this->assign_by_ref('ref', $ref);
 		}
 	}
-	
+
 	protected function before_espece_deplacer() {
 		self::cli($_GET['id']);
 		$orig = get_espece($this->db, $_GET['id']);
 	}
-	
+
 	protected function before_reglement() {
 		$u = $this->get_user_session();
 		if (!$u->agreed_the_rules()) {
@@ -2731,13 +2726,13 @@ class Poste extends clicnat_smarty {
 		$u = $this->get_user_session();
 		$this->assign('u', $u);
 	}
-	
+
 	public function before_citation_detail() {
 		$u = $this->get_user_session();
 		$citation =  $u->get_citation_authok($_GET['id']);
 		$this->assign_by_ref('citation', $citation);
 	}
-	
+
 	public function before_citation_liste_commentaires() {
 		return $this->before_citation_detail();
 	}
@@ -2748,17 +2743,17 @@ class Poste extends clicnat_smarty {
 		$citation_validation= new bobs_citation_avec_validation($this->db,$citation_org->id_citation);
 		$this->assign_by_ref('citation', $citation_validation);
 	}
-	
+
 	public function before_citation_ajoute_commentaire() {
 		$u = $this->get_user_session();
 		self::cls($_GET['msg']);
 		if (!empty($_GET['msg'])) {
-			$citation = $u->get_citation_authok($_GET['id']);	
+			$citation = $u->get_citation_authok($_GET['id']);
 			$citation->ajoute_commentaire('info', $u->id_utilisateur, $_GET['msg']);
 		}
 		$this->redirect("?t=citation_liste_commentaires&id={$_GET['id']}");
 	}
-	
+
 	public function before_v2_saisie() {
 		$u = $this->get_user_session();
 		$this->assign('key', IGN_KEY_POSTE);
@@ -2773,15 +2768,15 @@ class Poste extends clicnat_smarty {
 
 		$_SESSION[SESS]['masque'] = 'v2_saisie';
 	}
-	
+
 	public function before_v2_saisie_charge_gpx() {
 		require_once(OBS_DIR.'gpx.php');
 		$gpx = new bobs_gpx($_FILES['gpx']['tmp_name']);
-		unlink($_FILES['gpx']['tmp_name']);		
+		unlink($_FILES['gpx']['tmp_name']);
 		$_SESSION['gpx_wpts'] = serialize($gpx->get_wpts());
-		$this->redirect('?t=v2_saisie&apres_gpx=1');	
+		$this->redirect('?t=v2_saisie&apres_gpx=1');
 	}
-	
+
 	public function before_repertoire_ajoute_point() {
 		$u = $this->get_user_session();
 		if ($u->repertoire_ajoute_point($_GET['nom'], $_GET['x'], $_GET['y'])) {
@@ -2790,7 +2785,7 @@ class Poste extends clicnat_smarty {
 		exit();
 	}
 
-	public function before_repertoire_ajoute_polygone() {	
+	public function before_repertoire_ajoute_polygone() {
 		self::cls($_GET['geojson']);
 		$wkt = bobs_espace_polygon::wkt_depuis_geojson($_GET['geojson']);
 		$u = $this->get_user_session();
@@ -2800,7 +2795,7 @@ class Poste extends clicnat_smarty {
 		exit();
 	}
 
-	public function before_repertoire_ajoute_ligne() {	
+	public function before_repertoire_ajoute_ligne() {
 		self::cls($_GET['geojson']);
 		$wkt = bobs_espace_ligne::wkt_depuis_geojson($_GET['geojson']);
 		$u = $this->get_user_session();
@@ -2819,20 +2814,20 @@ class Poste extends clicnat_smarty {
 
 	public function before_repertoire_liste() {
 		$tri = bobs_utilisateur_repertoire::tri_par_nom;
-		
+
 		if (isset($_GET['par_date']))
 			$tri = bobs_utilisateur_repertoire::tri_par_date;
-			
+
 		$u = $this->get_user_session();
 		$repertoire = $u->repertoire_liste($tri);
-		$this->assign_by_ref('repertoire', $repertoire);	
-		if (isset($_SESSION['gpx_wpts'])) {		
-			require_once(OBS_DIR.'gpx.php');	
-			$gpx = unserialize($_SESSION['gpx_wpts']);			
+		$this->assign_by_ref('repertoire', $repertoire);
+		if (isset($_SESSION['gpx_wpts'])) {
+			require_once(OBS_DIR.'gpx.php');
+			$gpx = unserialize($_SESSION['gpx_wpts']);
 			$this->assign_by_ref('gpx_wpts', $gpx);
 		}
 	}
-	
+
 	protected function before_img() {
 		$w = (int)$_GET['w'];
 		$h = (int)$_GET['h'];
@@ -2845,7 +2840,7 @@ class Poste extends clicnat_smarty {
 		}
 		exit();
 	}
-	
+
 	public function before_citation_attache_doc() {
 		require_once(OBS_DIR.'/docs.php');
 		$u = $this->get_user_session();
@@ -2888,7 +2883,7 @@ class Poste extends clicnat_smarty {
 
 		if (isset($_GET['id_observation']))
 			$observation = get_observation($this->db, (int)$_GET['id_observation']);
-		elseif (isset($_GET['id'])) 
+		elseif (isset($_GET['id']))
 			$observation = get_observation($this->db, (int)$_GET['id']);
 
 		if (!$observation) {
@@ -2946,20 +2941,20 @@ class Poste extends clicnat_smarty {
 		$this->assign('ages', bobs_citation::get_age_list());
 		$this->assign('genres', bobs_citation::get_gender_list());
 
-		// J'ai le droit de la voir elle dans les mad		
-		if ($this->authok()) {			
+		// J'ai le droit de la voir elle dans les mad
+		if ($this->authok()) {
 			$u = $this->get_user_session();
 			try {
-				$citation = $u->get_citation_authok($_GET['id']);				
+				$citation = $u->get_citation_authok($_GET['id']);
 				if ($citation) {
 					$peut_voir = true;
 					$utilisateur_citation_authok = true;
 				}
 			} catch (Exception $e)  {
-				
+
 			}
 		}
-		
+
 		// Peut être est-elle rendue public ?
 		if (!$peut_voir) {
 			$citation = get_citation($this->db, $_GET['id']);
@@ -3034,11 +3029,11 @@ class Poste extends clicnat_smarty {
 					$u = $this->get_user_session();
 					$obs = $citation->get_observation();
 					$peut_le_faire = false;
-					
+
 					// Si je suis l'auteur je peux l'ouvrir
 					if ($u->id_utilisateur == $obs->id_utilisateur)
 						$peut_le_faire = true;
-					
+
 					// Si je l'ai vu je le peux aussi
 					if (!$peut_le_faire) {
 						foreach ($obs->get_observateurs() as $o) {
@@ -3048,7 +3043,7 @@ class Poste extends clicnat_smarty {
 							}
 						}
 					}
-					
+
 					if ($peut_le_faire) {
 						$redirect = true;
 						if ($_POST['action'] == 'ouvre_a_tous')
@@ -3063,10 +3058,10 @@ class Poste extends clicnat_smarty {
 				exit();
 			}
 		}
-		
+
 		$this->assign_by_ref('peut_voir', $peut_voir);
 		$this->assign_by_ref('utilisateur_citation_authok', $utilisateur_citation_authok);
-		
+
 		if ($peut_voir) {
 			$this->assign_by_ref('citation', $citation);
 			$ev = clicnat_enquete_version::getInstanceFromXML($this->db, $citation->enquete_resultat);
@@ -3075,7 +3070,7 @@ class Poste extends clicnat_smarty {
 			}
 		}
 	}
-	
+
 	public function authok() {
 		return $_SESSION[SESS]['auth_ok'] == true;
 	}
@@ -3087,7 +3082,7 @@ class Poste extends clicnat_smarty {
 				$u->set_db($this->db);
 				return $u;
 			}
-			if (!empty($_SESSION[SESS]['id_utilisateur']) || $reset)				
+			if (!empty($_SESSION[SESS]['id_utilisateur']) || $reset)
 				return new bobs_utilisateur($this->db, $_SESSION[SESS]['id_utilisateur']);
 			else
 				throw new ExceptionErrAuth();
@@ -3157,7 +3152,7 @@ class Poste extends clicnat_smarty {
 		if (!$fait) {
 			$id = $obs->add_citation($_GET['id_espece']);
 			$citation = $obs->get_citation($id);
-			$tag = bobs_tags::by_ref($this->db, '9100'); // mange 	
+			$tag = bobs_tags::by_ref($this->db, '9100'); // mange
 			$citation->ajoute_tag($tag->id_tag);
 			$tag = bobs_tags::by_ref($this->db, '9101'); // mange à la mangeoire
 			$citation->ajoute_tag($tag->id_tag);
@@ -3167,7 +3162,7 @@ class Poste extends clicnat_smarty {
 			$citation->set_indice_qualite(bobs_indice_qualite::indice_qualite_max);
 			$um->add_citation_authok($citation->id_citation);
 		}
-			
+
 		echo $_GET['nb'];
 		exit();
 	}
@@ -3235,7 +3230,7 @@ class Poste extends clicnat_smarty {
 		$u = $this->mangeoire();
 		$mangeoire = new clicnat_mangeoire($this->db, $_GET['id']);
 
-		if (!$mangeoire->a_observateur($u->id_utilisateur)) 
+		if (!$mangeoire->a_observateur($u->id_utilisateur))
 			throw new Exception('pas membre de cette mangeoire');
 
 		$this->assign('mangeoire', $mangeoire);
@@ -3315,12 +3310,12 @@ class Poste extends clicnat_smarty {
 				$d[clicnat_iterateur_calendrier::dtable_c_participants],
 				$d[clicnat_iterateur_calendrier::dtable_c_espace_nom]." $im"
 			);
-			
+
 		}
 		$r['aaData'] = $ret;
 		echo json_encode($r);
 		exit();
-		
+
 	}
 
 	public function before_espace() {
@@ -3343,7 +3338,7 @@ class Poste extends clicnat_smarty {
 				$extraction->ajouter_condition(new bobs_ext_c_poly($_GET['table'], 'espace_point', (int)$_GET['id_espace']));
 				break;
 		}
-		
+
 		$this->assign('espace', $espace);
 		$this->assign('extraction', $extraction);
 	}
@@ -3373,7 +3368,7 @@ class Poste extends clicnat_smarty {
 	}
 
 	public function before_flux_contenu() {
-		try { 
+		try {
 			$u = $this->get_user_session();
 			$limite_reseau = false;
 			if (defined('INSTALL')) {
@@ -3405,20 +3400,20 @@ class Poste extends clicnat_smarty {
 			$extraction->ajouter_condition(new bobs_ext_c_brouillard(false));
 			$extraction->ajouter_condition(new bobs_ext_c_precision_date_max(10));
 			$extraction->ajouter_condition(new bobs_ext_c_sans_tag_invalide());
-			foreach ($reseaux as $reseau) 
+			foreach ($reseaux as $reseau)
 				$extraction->ajouter_condition(new bobs_ext_c_reseau($reseau));
-		
+
 			switch ($_GET['filtre_type']) {
 				default:
 					break;
 			}
-		
+
 			// on renvoi ici la timeline avant d'ajouter les limites de dates
 			if (isset($_GET['timeline'])) {
 				header('Content-Type: application/json');
 				echo json_encode($extraction->mois_et_annees());
 				exit();
-			} 
+			}
 
 			$extraction->ajouter_condition(new bobs_ext_c_mois((int)$_GET['flux_p_mois']));
 			$extraction->ajouter_condition(new bobs_ext_c_annee((int)$_GET['flux_p_annee']));
@@ -3433,7 +3428,7 @@ class Poste extends clicnat_smarty {
 		}
 	}
 
-	public function display() {
+	public function run() {
 		global $start_time;
 		$this->session();
 		try {
@@ -3494,5 +3489,5 @@ class Poste extends clicnat_smarty {
 require_once(DB_INC_PHP);
 get_db($db);
 $poste = new Poste($db);
-$poste->display();
+$poste->run();
 ?>
