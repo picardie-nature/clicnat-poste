@@ -288,12 +288,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/picardie-nature/clicnat-core.git",
-                "reference": "dca8fe1dd3d232bcfe1116e6b42d040efb4c90f0"
+                "reference": "70566e61bad3a867f924eabfe20ac7e4265eaf91"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/picardie-nature/clicnat-core/zipball/dca8fe1dd3d232bcfe1116e6b42d040efb4c90f0",
-                "reference": "dca8fe1dd3d232bcfe1116e6b42d040efb4c90f0",
+                "url": "https://api.github.com/repos/picardie-nature/clicnat-core/zipball/70566e61bad3a867f924eabfe20ac7e4265eaf91",
+                "reference": "70566e61bad3a867f924eabfe20ac7e4265eaf91",
                 "shasum": ""
             },
             "require": {
@@ -323,7 +323,7 @@
                 "source": "https://github.com/picardie-nature/clicnat-core/tree/master",
                 "issues": "https://github.com/picardie-nature/clicnat-core/issues"
             },
-            "time": "2018-01-21 16:57:49"
+            "time": "2018-01-21 22:38:38"
         },
         {
             "name": "roderik/pwgen-php",
