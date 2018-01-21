@@ -23,3 +23,4 @@ RUN mkdir /opt/app/www/openlayers;\
 	mv img /opt/app/www/openlayers/;\
 	cd .. ; rm -rf openlayers-release-2.13.1
 RUN rm /tmp/proj4js.tar.gz /tmp/ol.tar.gz
+RUN touch /etc/baseobs/revision.txt

@@ -3092,7 +3092,6 @@ class Poste extends clicnat_smarty {
 
 	/* Section consacrée aux mangeoires */
 	private function mangeoire() {
-		require_once(OBS_DIR.'mangeoire.php');
 		$u = $this->get_user_session();
 		$u_mangeoire = new clicnat_mangeoire_observateur($this->db, $u->id_utilisateur);
 		$this->assign_by_ref('observateur', $u_mangeoire);
